@@ -22,14 +22,24 @@ package net.rcarz.jiraclient;
 import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.security.KeyManagementException;
+import java.security.KeyStoreException;
+import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import javax.security.cert.CertificateException;
+import javax.security.cert.X509Certificate;
+
 import org.apache.http.client.HttpClient;
+import org.apache.http.conn.ssl.SSLConnectionSocketFactory;
+import org.apache.http.conn.ssl.TrustStrategy;
 import org.apache.http.impl.client.DefaultHttpClient;
+import org.apache.http.impl.client.HttpClients;
 import org.apache.http.impl.conn.PoolingClientConnectionManager;
+import org.apache.http.ssl.SSLContextBuilder;
 
 import net.sf.json.JSON;
 import net.sf.json.JSONArray;
@@ -48,6 +58,9 @@ public class JiraClient {
      *
      * @param uri Base URI of the JIRA server
      * @throws JiraException 
+     * @throws KeyStoreException 
+     * @throws NoSuchAlgorithmException 
+     * @throws KeyManagementException 
      */
     public JiraClient(String uri) throws JiraException {
         this(null, uri, null);
@@ -59,8 +72,11 @@ public class JiraClient {
      * @param uri Base URI of the JIRA server
      * @param creds Credentials to authenticate with
      * @throws JiraException 
+     * @throws KeyStoreException 
+     * @throws NoSuchAlgorithmException 
+     * @throws KeyManagementException 
      */
-    public JiraClient(String uri, ICredentials creds) throws JiraException {
+    public JiraClient(String uri, ICredentials creds) throws JiraException{
         this(null, uri, creds);
     }
     
@@ -71,13 +87,49 @@ public class JiraClient {
      * @param uri Base URI of the JIRA server
      * @param creds Credentials to authenticate with
      * @throws JiraException 
+     * @throws KeyStoreException 
+     * @throws NoSuchAlgorithmException 
+     * @throws KeyManagementException 
      */
-    public JiraClient(HttpClient httpClient, String uri, ICredentials creds) throws JiraException {
+    @SuppressWarnings("deprecation")
+	public JiraClient(HttpClient httpClient, String uri, ICredentials creds) throws JiraException {
         if (httpClient == null) {
-            PoolingClientConnectionManager connManager = new PoolingClientConnectionManager();
-            connManager.setDefaultMaxPerRoute(20);
-            connManager.setMaxTotal(40);
-            httpClient = new DefaultHttpClient(connManager);
+        	
+        	try {
+        		// accept all certificates for http 
+				SSLContextBuilder builder = new SSLContextBuilder();
+				builder.loadTrustMaterial(new TrustStrategy() {
+				    public boolean isTrusted(java.security.cert.X509Certificate[] arg0, String arg1)
+							throws java.security.cert.CertificateException {
+						// trust them all
+						return true;
+					}
+				});
+				
+				SSLConnectionSocketFactory sslSF = new SSLConnectionSocketFactory(builder.build(),
+				        SSLConnectionSocketFactory.ALLOW_ALL_HOSTNAME_VERIFIER);
+				// create the httpClient
+				httpClient = HttpClients.custom().setSSLSocketFactory(sslSF).build();
+			
+			} catch (KeyManagementException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			} catch (NoSuchAlgorithmException e ) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}	catch (KeyStoreException e)
+        	{// TODO Auto-generated catch block
+				e.printStackTrace();
+        	}
+        	
+            /* old way of doing it
+             */
+        	if (httpClient == null){
+			 PoolingClientConnectionManager connManager = new PoolingClientConnectionManager();
+             connManager.setDefaultMaxPerRoute(20);
+             connManager.setMaxTotal(40);
+             httpClient = new DefaultHttpClient(connManager);
+        	}
         }
 
         restclient = new RestClient(httpClient, creds, URI.create(uri));

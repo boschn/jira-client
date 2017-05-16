@@ -25,9 +25,20 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.UnsupportedEncodingException;
+import java.net.MalformedURLException;
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.net.URL;
+import java.security.GeneralSecurityException;
+import java.security.KeyManagementException;
+import java.security.KeyStoreException;
+import java.security.NoSuchAlgorithmException;
 import java.util.Map;
+
+import javax.net.ssl.SSLContext;
+import javax.security.cert.CertificateException;
+
+import java.security.cert.X509Certificate;
 
 import net.sf.json.JSON;
 import net.sf.json.JSONObject;
@@ -47,11 +58,13 @@ import org.apache.http.client.methods.HttpPost;
 import org.apache.http.client.methods.HttpPut;
 import org.apache.http.client.methods.HttpRequestBase;
 import org.apache.http.client.utils.URIBuilder;
+import org.apache.http.conn.ssl.TrustStrategy;
 import org.apache.http.entity.StringEntity;
 import org.apache.http.entity.mime.MultipartEntity;
 import org.apache.http.entity.mime.content.ByteArrayBody;
 import org.apache.http.entity.mime.content.FileBody;
 import org.apache.http.entity.mime.content.InputStreamBody;
+import org.apache.http.ssl.SSLContexts;
 
 /**
  * A simple REST client that speaks JSON.
@@ -61,6 +74,7 @@ public class RestClient {
     private HttpClient httpClient = null;
     private ICredentials creds = null;
     private URI uri = null;
+    private String sessionId = null;
 
     /**
      * Creates a REST client instance with a URI.
@@ -119,10 +133,63 @@ public class RestClient {
 
         return ub.build();
     }
+/*
+    public boolean Initiate() throws RestException, IOException, KeyManagementException, NoSuchAlgorithmException, KeyStoreException{
+    	
+    	HttpPost post = new HttpPost("https://jira3.technisat-digital.de/rest/auth/1/session");
+        post.addHeader("Accept", "application/json");
+        post.addHeader("X-Atlassian-Token", "nocheck");
+        post.addHeader("Content-Type", "application/json");
+        StringEntity input = new StringEntity("{\"username\":boris.schneider,\"password\":\"Carconnect1!\"}");
+        post.setEntity(input);
 
+        HttpResponse aResponse = httpClient.execute(post);
+        HttpEntity anEntity = aResponse.getEntity();
+        // extract the session id
+        StringBuilder result = new StringBuilder();
+        if (anEntity != null) {
+        	// get encoding
+            String encoding = null;
+            if (anEntity.getContentEncoding() != null) 
+            	encoding = anEntity.getContentEncoding().getValue();
+            if (encoding == null) {
+    	        Header contentTypeHeader = aResponse.getFirstHeader("Content-Type");
+    	        HeaderElement[] contentTypeElements = contentTypeHeader.getElements();
+    	        for (HeaderElement he : contentTypeElements) {
+    	        	NameValuePair nvp = he.getParameterByName("charset");
+    	        	if (nvp != null) {
+    	        		encoding = nvp.getValue();
+    	        	}
+    	        }
+            }
+            // get the stream
+            InputStreamReader isr =  encoding != null ?
+                new InputStreamReader(anEntity.getContent(), encoding) :
+                new InputStreamReader(anEntity.getContent());
+            BufferedReader br = new BufferedReader(isr);
+            String line = "";
+            // feed it
+            while ((line = br.readLine()) != null)
+                result.append(line);
+        }
+
+        // not able to login
+        // 403 is unable to log in
+        if (aResponse.getStatusLine().getStatusCode() >= 300)
+                throw new RestException(aResponse.getStatusLine().getReasonPhrase(), 
+                		aResponse.getStatusLine().getStatusCode(), result.toString());
+        
+        // convert to JSON
+        JSON aJson = result.length() > 0 ? JSONSerializer.toJSON(result.toString()): null;
+        
+        
+		return true;
+
+    }
+ */
     private JSON request(HttpRequestBase req) throws RestException, IOException {
         req.addHeader("Accept", "application/json");
-
+        
         if (creds != null)
             creds.authenticate(req);
 
@@ -171,12 +238,8 @@ public class RestClient {
         if (payload != null) {
             StringEntity ent = null;
 
-            try {
-                ent = new StringEntity(payload, "UTF-8");
-                ent.setContentType("application/json");
-            } catch (UnsupportedEncodingException ex) {
-                /* utf-8 should always be supported... */
-            }
+            ent = new StringEntity(payload, "UTF-8");
+			ent.setContentType("application/json");
 
             req.addHeader("Content-Type", "application/json");
             req.setEntity(ent);
