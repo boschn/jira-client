@@ -1,5 +1,15 @@
 # jira-client #
 
+## PATCH MEMO ##
+
+
+
+This Jira-Client was patched to ignore SSL certifcates to enable to run on any https connection
+2017-05-17 B.Schneider
+
+
+## Content ##
+
 [![Build Status](https://travis-ci.org/rcarz/jira-client.svg?branch=master)](https://travis-ci.org/rcarz/jira-client)
 
 jira-client is a simple and lightweight JIRA REST client library for Java.

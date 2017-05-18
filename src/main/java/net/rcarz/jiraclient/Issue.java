@@ -633,7 +633,9 @@ public class Issue extends Resource {
             try {
                 URI searchUri = createSearchURI(restclient, jql, includedFields,
                         expandFields, maxResults, startAt);
+                
                 result = restclient.get(searchUri);
+                
             } catch (Exception ex) {
                 throw new JiraException("Failed to search issues", ex);
             }
