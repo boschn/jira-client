@@ -37,8 +37,10 @@ import org.apache.http.client.HttpClient;
 import org.apache.http.conn.ssl.SSLConnectionSocketFactory;
 import org.apache.http.conn.ssl.TrustStrategy;
 import org.apache.http.impl.client.DefaultHttpClient;
+import org.apache.http.impl.client.HttpClientBuilder;
 import org.apache.http.impl.client.HttpClients;
 import org.apache.http.impl.conn.PoolingClientConnectionManager;
+import org.apache.http.params.CoreConnectionPNames;
 import org.apache.http.ssl.SSLContextBuilder;
 
 import net.sf.json.JSON;
@@ -109,8 +111,10 @@ public class JiraClient {
 				SSLConnectionSocketFactory sslSF = new SSLConnectionSocketFactory(builder.build(),
 				        SSLConnectionSocketFactory.ALLOW_ALL_HOSTNAME_VERIFIER);
 				// create the httpClient
-				httpClient = HttpClients.custom().setSSLSocketFactory(sslSF).build();
-			
+				
+				// httpClient = HttpClients.custom().setSSLSocketFactory(sslSF).build();
+				httpClient = HttpClientBuilder.create().setSSLSocketFactory(sslSF).build();
+			    
 			} catch (KeyManagementException e) {
 				// TODO Auto-generated catch block
 				e.printStackTrace();
@@ -416,6 +420,40 @@ public class JiraClient {
                                            String expandFields, Integer maxResults,
                                            Integer startAt) throws JiraException {
 
+    	boolean nopatch = false;
+    	if (nopatch){
+    	try {
+    		// B.Schneider
+    		// Patched to bypass the iterator
+			URI searchUri = Issue.createSearchURI(restclient, jql, includedFields,
+			        expandFields, maxResults,startAt);
+			
+			JSON result = restclient.get(searchUri);
+			
+			@SuppressWarnings("rawtypes")
+			Map map = (Map) result;
+			 
+			int startedAt = Field.getInteger(map.get("startAt"));
+            int maxResultsReceived = Field.getInteger(map.get("maxResults"));
+            int total = Field.getInteger(map.get("total"));
+            List<Issue> issues = Field.getResourceArray(Issue.class, map.get("issues"), restclient);
+            
+            return new Issue.SearchResult(issues,total, startedAt, maxResultsReceived);
+            
+			
+			
+		} catch (URISyntaxException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} catch (RestException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+    	}
+        // original
         return Issue.search(
             restclient,
             jql,

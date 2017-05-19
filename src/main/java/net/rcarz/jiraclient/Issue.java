@@ -696,6 +696,20 @@ public class Issue extends Resource {
         }
 
         /**
+         * just create the container -> bypass iterator
+         * (B.Schneider)
+         * @param issues
+         * @param total
+         * @param maxResults
+         * @param startAt
+         */
+        public SearchResult(List<Issue> issues, Integer total, Integer maxResults, Integer startAt){
+        	 this.max = maxResults;
+             this.start = startAt;
+             this.issues = issues;
+             this.total = total;
+        }
+        /**
          * All issues found.
          * 
          * @return All issues found.
@@ -1318,6 +1332,7 @@ public class Issue extends Resource {
             String includedFields, String expandFields, Integer maxResults,
             Integer startAt) throws JiraException {
 
+    	
         return new SearchResult(
             restclient,
             jql,
@@ -1340,7 +1355,7 @@ public class Issue extends Resource {
      * @return the URI to execute a jql search.
      * @throws URISyntaxException
      */
-    private static URI createSearchURI(RestClient restclient, String jql,
+    static URI createSearchURI(RestClient restclient, String jql,
             String includedFields, String expandFields, Integer maxResults,
             Integer startAt) throws URISyntaxException {
         Map<String, String> queryParams = new HashMap<String, String>();

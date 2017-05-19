@@ -65,6 +65,7 @@ import org.apache.http.entity.mime.content.ByteArrayBody;
 import org.apache.http.entity.mime.content.FileBody;
 import org.apache.http.entity.mime.content.InputStreamBody;
 import org.apache.http.ssl.SSLContexts;
+import org.apache.http.util.EntityUtils;
 
 /**
  * A simple REST client that speaks JSON.
@@ -133,60 +134,6 @@ public class RestClient {
 
         return ub.build();
     }
-/*
-    public boolean Initiate() throws RestException, IOException, KeyManagementException, NoSuchAlgorithmException, KeyStoreException{
-    	
-    	HttpPost post = new HttpPost("https://jira3.technisat-digital.de/rest/auth/1/session");
-        post.addHeader("Accept", "application/json");
-        post.addHeader("X-Atlassian-Token", "nocheck");
-        post.addHeader("Content-Type", "application/json");
-        StringEntity input = new StringEntity("{\"username\":boris.schneider,\"password\":\"Carconnect1!\"}");
-        post.setEntity(input);
-
-        HttpResponse aResponse = httpClient.execute(post);
-        HttpEntity anEntity = aResponse.getEntity();
-        // extract the session id
-        StringBuilder result = new StringBuilder();
-        if (anEntity != null) {
-        	// get encoding
-            String encoding = null;
-            if (anEntity.getContentEncoding() != null) 
-            	encoding = anEntity.getContentEncoding().getValue();
-            if (encoding == null) {
-    	        Header contentTypeHeader = aResponse.getFirstHeader("Content-Type");
-    	        HeaderElement[] contentTypeElements = contentTypeHeader.getElements();
-    	        for (HeaderElement he : contentTypeElements) {
-    	        	NameValuePair nvp = he.getParameterByName("charset");
-    	        	if (nvp != null) {
-    	        		encoding = nvp.getValue();
-    	        	}
-    	        }
-            }
-            // get the stream
-            InputStreamReader isr =  encoding != null ?
-                new InputStreamReader(anEntity.getContent(), encoding) :
-                new InputStreamReader(anEntity.getContent());
-            BufferedReader br = new BufferedReader(isr);
-            String line = "";
-            // feed it
-            while ((line = br.readLine()) != null)
-                result.append(line);
-        }
-
-        // not able to login
-        // 403 is unable to log in
-        if (aResponse.getStatusLine().getStatusCode() >= 300)
-                throw new RestException(aResponse.getStatusLine().getReasonPhrase(), 
-                		aResponse.getStatusLine().getStatusCode(), result.toString());
-        
-        // convert to JSON
-        JSON aJson = result.length() > 0 ? JSONSerializer.toJSON(result.toString()): null;
-        
-        
-		return true;
-
-    }
- */
     private JSON request(HttpRequestBase req) throws RestException, IOException {
         req.addHeader("Accept", "application/json");
         
@@ -229,6 +176,11 @@ public class RestClient {
         if (sl.getStatusCode() >= 300)
             throw new RestException(sl.getReasonPhrase(), sl.getStatusCode(), result.toString());
 
+        // B.Schneider
+        // do something useful with the response body -> memory leak leads to locked httpclient after 2-3 requests
+        // and ensure it is fully consumed
+        EntityUtils.consume(ent);
+        // end patch
         return result.length() > 0 ? JSONSerializer.toJSON(result.toString()): null;
     }
 
